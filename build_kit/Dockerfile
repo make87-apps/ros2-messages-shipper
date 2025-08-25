@@ -17,7 +17,7 @@ COPY . .
 RUN source /opt/ros/${ROS_DISTRO}/setup.bash && \
     colcon build \
     --merge-install \
-    --cmake-args -DCMAKE_BUILD_TYPE=Debug
+    --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 # ── Runtime stage ──────────────────────────────────────────────────────────────
 FROM ros:${ROS_DISTRO}-ros-core
