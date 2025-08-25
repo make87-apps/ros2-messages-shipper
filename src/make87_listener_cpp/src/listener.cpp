@@ -75,17 +75,17 @@ RerunConfig get_rerun_config() {
         // Navigate to interfaces.rerun-grpc client service config
         if (config.contains("interfaces") &&
             config["interfaces"].contains("rerun-grpc") &&
-            config["interfaces"]["rerun-grpc"].contains("rerun-grpc-client") &&
-            config["interfaces"]["rerun-grpc"]["rerun-grpc-client"].contains("access_point")) {
+            config["interfaces"]["rerun-grpc"].contains("clients") &&
+            config["interfaces"]["rerun-grpc"]["clients"].contains("rerun-grpc-client")) {
 
-            auto access_point = config["interfaces"]["rerun-grpc"]["rerun-grpc-client"]["access_point"];
+            auto client_config = config["interfaces"]["rerun-grpc"]["clients"]["rerun-grpc-client"];
 
-            if (access_point.contains("vpn_ip")) {
-                vpn_ip = access_point["vpn_ip"];
+            if (client_config.contains("vpn_ip")) {
+                vpn_ip = client_config["vpn_ip"];
             }
 
-            if (access_point.contains("vpn_port")) {
-                vpn_port = std::to_string(static_cast<int>(access_point["vpn_port"]));
+            if (client_config.contains("vpn_port")) {
+                vpn_port = std::to_string(static_cast<int>(client_config["vpn_port"]));
             }
         }
 
@@ -167,14 +167,14 @@ TopicConfig get_topic_config() {
     try {
         auto config = nlohmann::json::parse(config_env);
 
-        // Navigate to interfaces.ros.subscribers.chatter.topic_key
+        // Navigate to interfaces.ros.subscribers.any_message.topic_key
         if (config.contains("interfaces") &&
             config["interfaces"].contains("ros") &&
             config["interfaces"]["ros"].contains("subscribers") &&
-            config["interfaces"]["ros"]["subscribers"].contains("chatter") &&
-            config["interfaces"]["ros"]["subscribers"]["chatter"].contains("topic_key")) {
+            config["interfaces"]["ros"]["subscribers"].contains("any_message") &&
+            config["interfaces"]["ros"]["subscribers"]["any_message"].contains("topic_key")) {
 
-            std::string topic_key = config["interfaces"]["ros"]["subscribers"]["chatter"]["topic_key"];
+            std::string topic_key = config["interfaces"]["ros"]["subscribers"]["any_message"]["topic_key"];
 
             // Add make87_ prefix and sanitize hyphens to underscores
             std::string sanitized_topic = "make87_" + topic_key;
