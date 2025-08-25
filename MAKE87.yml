@@ -1,47 +1,32 @@
 version: 1
 interfaces:
-  - name: zenoh
+  - name: ros
     protocol: zenoh
     default_port:
       name: zenoh
       protocol: TCP
       target_port: 7447
-    publishers:
-      - name: outgoing_message
+    subscribers:
+      - name: any_message
         spec:
-          make87_message: make87_messages.text.PlainText
-        encoding: proto
-        config:
-          type: object
-          properties:
-            congestion_control:
-              type: string
-              enum: [ DROP, BLOCK ]
-              default: DROP
-            priority:
-              type: string
-              enum:
-                - REAL_TIME
-                - INTERACTIVE_HIGH
-                - INTERACTIVE_LOW
-                - DATA_HIGH
-                - DATA
-                - DATA_LOW
-                - BACKGROUND
-              default: DATA
-            express:
-              type: boolean
-              default: true
-            reliability:
-              type: string
-              enum: [ BEST_EFFORT, RELIABLE ]
-              default: RELIABLE
+          string: ros2.*
+        encoding: cdr
+  - name: rerun-grpc
+    protocol: grpc
+    clients:
+      - name: rerun-grpc-client
+        spec:
+          string: rerun-grpc
 container_config:
   environment:
-    RUST_LOG: info
+    ROS_DOMAIN_ID: 87
+  volumes:
+    - /etc/localtime:/etc/localtime:ro
 build:
-  build_kit:
-    name: rust
+  custom:
+    dockerfile: build_kit/Dockerfile
 dev_build:
-  build_kit:
-    name: rust
+  custom:
+    dockerfile: build_kit/Dockerfile.dev
+    build_additions:
+      ssh: ssh_server
