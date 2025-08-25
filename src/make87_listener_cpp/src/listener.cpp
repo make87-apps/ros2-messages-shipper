@@ -253,7 +253,7 @@ private:
   void setup_string_subscriber(const std::string& topic_name) {
     string_sub_ = this->create_subscription<std_msgs::msg::String>(
       topic_name, 10, [this, topic_name](const std_msgs::msg::String::SharedPtr msg) {
-        RCLCPP_INFO(this->get_logger(), "Received std_msgs/msg/String: %s", msg->data.c_str());
+        RCLCPP_DEBUG(this->get_logger(), "Received std_msgs/msg/String: %s", msg->data.c_str());
 
         // Log to rerun using message package nesting as entity path with application name suffix
         std::string entity_path = "/std_msgs/msg/String/" + rerun_config_.application_name;
@@ -264,7 +264,7 @@ private:
   void setup_compressed_image_subscriber(const std::string& topic_name) {
     image_sub_ = this->create_subscription<sensor_msgs::msg::CompressedImage>(
       topic_name, 10, [this](const sensor_msgs::msg::CompressedImage::SharedPtr msg) {
-        RCLCPP_INFO(this->get_logger(), "Received sensor_msgs/msg/CompressedImage: format=%s, size=%zu bytes",
+        RCLCPP_DEBUG(this->get_logger(), "Received sensor_msgs/msg/CompressedImage: format=%s, size=%zu bytes",
                     msg->format.c_str(), msg->data.size());
 
         // Process header if present
@@ -284,7 +284,7 @@ private:
         if (!msg->header.frame_id.empty() && msg->header.frame_id != "/") {
           entity_path += "/" + msg->header.frame_id;
         }
-        
+
         auto encoded_image = rerun::EncodedImage::from_bytes(msg->data).with_media_type(rerun::MediaType(media_type));
         rec_->log(entity_path, encoded_image);
 
