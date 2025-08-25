@@ -279,12 +279,17 @@ private:
           media_type = "image/png";
         }
 
-        // Log to rerun using frame_id from header as entity path
+        // Log to rerun using message package nesting with frame_id suffix
+        std::string entity_path = "/sensor_msgs/msg/CompressedImage";
+        if (!msg->header.frame_id.empty() && msg->header.frame_id != "/") {
+          entity_path += "/" + msg->header.frame_id;
+        }
+        
         auto encoded_image = rerun::EncodedImage::from_bytes(msg->data).with_media_type(rerun::MediaType(media_type));
-        rec_->log(header_info.entity_path, encoded_image);
+        rec_->log(entity_path, encoded_image);
 
         RCLCPP_DEBUG(this->get_logger(), "Logged image to entity: %s with timestamp: %.3f",
-                     header_info.entity_path.c_str(), header_info.timestamp_secs);
+                     entity_path.c_str(), header_info.timestamp_secs);
       });
   }
 
