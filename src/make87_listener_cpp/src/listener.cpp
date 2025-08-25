@@ -23,6 +23,7 @@ struct RerunConfig {
     std::string vpn_ip;
     std::string vpn_port;
     std::string system_id;
+    std::string application_name;
 };
 
 std::string deterministic_uuid_from_string(const std::string& s) {
@@ -54,10 +55,11 @@ RerunConfig get_rerun_config() {
     const std::string default_ip = "127.0.0.1";
     const std::string default_port = "9876";
     const std::string default_system_id = "make87_ros2_shipper";
+    const std::string default_application_name = "default_app";
 
     if (!config_env) {
         RCLCPP_INFO(rclcpp::get_logger("make87_listener"), "MAKE87_CONFIG not found, using defaults");
-        return {default_ip, default_port, default_system_id};
+        return {default_ip, default_port, default_system_id, default_application_name};
     }
 
     try {
@@ -66,10 +68,16 @@ RerunConfig get_rerun_config() {
         std::string vpn_ip = default_ip;
         std::string vpn_port = default_port;
         std::string system_id = default_system_id;
+        std::string application_name = default_application_name;
 
-        // Extract system_id from application_info
-        if (config.contains("application_info") && config["application_info"].contains("system_id")) {
-            system_id = config["application_info"]["system_id"];
+        // Extract from application_info
+        if (config.contains("application_info")) {
+            if (config["application_info"].contains("system_id")) {
+                system_id = config["application_info"]["system_id"];
+            }
+            if (config["application_info"].contains("application_name")) {
+                application_name = config["application_info"]["application_name"];
+            }
         }
 
         // Navigate to interfaces.rerun-grpc client service config
@@ -89,13 +97,13 @@ RerunConfig get_rerun_config() {
             }
         }
 
-        RCLCPP_INFO(rclcpp::get_logger("make87_listener"), "Using rerun config - ip: %s, port: %s, system_id: %s",
-                    vpn_ip.c_str(), vpn_port.c_str(), system_id.c_str());
-        return {vpn_ip, vpn_port, system_id};
+        RCLCPP_INFO(rclcpp::get_logger("make87_listener"), "Using rerun config - ip: %s, port: %s, system_id: %s, application_name: %s",
+                    vpn_ip.c_str(), vpn_port.c_str(), system_id.c_str(), application_name.c_str());
+        return {vpn_ip, vpn_port, system_id, application_name};
 
     } catch (const nlohmann::json::exception& e) {
         RCLCPP_ERROR(rclcpp::get_logger("make87_listener"), "Error parsing MAKE87_CONFIG JSON: %s, using defaults", e.what());
-        return {default_ip, default_port, default_system_id};
+        return {default_ip, default_port, default_system_id, default_application_name};
     }
 }
 
@@ -200,19 +208,19 @@ class Listener : public rclcpp::Node {
 public:
   Listener() : rclcpp::Node("make87_listener") {
     // Initialize rerun recording stream following Rust implementation
-    RerunConfig rerun_config = get_rerun_config();
+    rerun_config_ = get_rerun_config();
 
     // Create deterministic recording ID from system_id
-    std::string recording_id = deterministic_uuid_from_string(rerun_config.system_id);
+    std::string recording_id = deterministic_uuid_from_string(rerun_config_.system_id);
 
     RCLCPP_INFO(this->get_logger(), "Using recording id: %s", recording_id.c_str());
 
     // Create recording stream with system_id and deterministic recording_id
-    rec_ = std::make_shared<rerun::RecordingStream>(rerun_config.system_id, recording_id);
+    rec_ = std::make_shared<rerun::RecordingStream>(rerun_config_.system_id, recording_id);
     rec_->set_global();
 
     // Format connection URL: rerun+http://ip:port/proxy
-    std::string connection_url = "rerun+http://" + rerun_config.vpn_ip + ":" + rerun_config.vpn_port + "/proxy";
+    std::string connection_url = "rerun+http://" + rerun_config_.vpn_ip + ":" + rerun_config_.vpn_port + "/proxy";
 
     // Connect with options (using default flush timeout)
     auto connect_result = rec_->connect_grpc(connection_url, 2.0);
@@ -247,8 +255,8 @@ private:
       topic_name, 10, [this, topic_name](const std_msgs::msg::String::SharedPtr msg) {
         RCLCPP_INFO(this->get_logger(), "Received std_msgs/msg/String: %s", msg->data.c_str());
 
-        // Log to rerun
-        std::string entity_path = "/ros2/text/" + topic_name.substr(7); // Remove "make87_" prefix
+        // Log to rerun using message package nesting as entity path with application name suffix
+        std::string entity_path = "/std_msgs/msg/String/" + rerun_config_.application_name;
         rec_->log(entity_path, rerun::TextDocument(msg->data));
       });
   }
@@ -283,6 +291,7 @@ private:
   std::shared_ptr<rerun::RecordingStream> rec_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr string_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr image_sub_;
+  RerunConfig rerun_config_;
 };
 
 int main(int argc, char* argv[]) {
