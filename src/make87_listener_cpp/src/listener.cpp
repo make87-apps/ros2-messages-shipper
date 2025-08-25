@@ -205,8 +205,10 @@ public:
     // Create deterministic recording ID from system_id
     std::string recording_id = deterministic_uuid_from_string(rerun_config.system_id);
 
+    RCLCPP_INFO(this->get_logger(), "Using recording id: %s", recording_id.c_str());
+
     // Create recording stream with system_id and deterministic recording_id
-    rec_ = std::make_shared<rerun::RecordingStream>(rerun_config.system_id);
+    rec_ = std::make_shared<rerun::RecordingStream>(rerun_config.system_id, recording_id);
     rec_->set_global();
 
     // Format connection URL: rerun+http://ip:port/proxy
