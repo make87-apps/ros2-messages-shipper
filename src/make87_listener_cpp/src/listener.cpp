@@ -11,6 +11,7 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/header.hpp"
 #include "sensor_msgs/msg/compressed_image.hpp"
+#include "sensor_msgs/msg/image.hpp"
 #include <nlohmann/json.hpp>
 #include <rerun.hpp>
 
@@ -146,6 +147,8 @@ std::string parse_message_type_from_topic_key(const std::string& topic_key) {
             // Handle special case mappings
             if (package == "sensor_msgs" && type_name == "compressedimage") {
                 type_name = "CompressedImage";
+            } else if (package == "sensor_msgs" && type_name == "image") {
+                type_name = "Image";
             } else if (package == "std_msgs" && type_name == "string") {
                 type_name = "String";
             }
@@ -240,6 +243,8 @@ public:
       setup_string_subscriber(config.topic_name);
     } else if (config.message_type == "sensor_msgs/msg/CompressedImage") {
       setup_compressed_image_subscriber(config.topic_name);
+    } else if (config.message_type == "sensor_msgs/msg/Image") {
+      setup_image_subscriber(config.topic_name);
     } else {
       RCLCPP_ERROR(this->get_logger(), "Unsupported message type: %s", config.message_type.c_str());
       throw std::runtime_error("Unsupported message type: " + config.message_type);
@@ -293,9 +298,43 @@ private:
       });
   }
 
+  void setup_image_subscriber(const std::string& topic_name) {
+    raw_image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
+      topic_name, 10, [this](const sensor_msgs::msg::Image::SharedPtr msg) {
+        RCLCPP_DEBUG(this->get_logger(), "Received sensor_msgs/msg/Image: encoding=%s, width=%d, height=%d",
+                    msg->encoding.c_str(), msg->width, msg->height);
+
+        // Only process RGB8 encoding
+        if (msg->encoding != "rgb8") {
+          RCLCPP_WARN(this->get_logger(), "Unsupported encoding: %s. Only rgb8 is supported.", msg->encoding.c_str());
+          return;
+        }
+
+        // Process header if present
+        HeaderInfo header_info = process_header(msg->header);
+
+        // Set timestamp in rerun
+        rec_->set_time_sequence("header_time", static_cast<int64_t>(header_info.timestamp_secs * 1e9));
+
+        // Log to rerun using message package nesting with frame_id suffix
+        std::string entity_path = "/sensor_msgs/msg/Image";
+        if (!msg->header.frame_id.empty() && msg->header.frame_id != "/") {
+          entity_path += "/" + msg->header.frame_id;
+        }
+
+        // Create RGB image from raw data
+        auto image = rerun::Image::from_rgb24(msg->data.data(), {msg->width, msg->height});
+        rec_->log(entity_path, image);
+
+        RCLCPP_DEBUG(this->get_logger(), "Logged RGB8 image to entity: %s with timestamp: %.3f, size: %dx%d",
+                     entity_path.c_str(), header_info.timestamp_secs, msg->width, msg->height);
+      });
+  }
+
   std::shared_ptr<rerun::RecordingStream> rec_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr string_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr image_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr raw_image_sub_;
   RerunConfig rerun_config_;
 };
 
