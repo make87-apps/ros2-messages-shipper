@@ -323,7 +323,7 @@ private:
         }
 
         // Create RGB image from raw data
-        auto image = rerun::Image::from_rgb24(msg->data.data(), {msg->width, msg->height});
+        auto image = rerun::Image::from_rgb24(msg->data, {msg->width, msg->height});
         rec_->log(entity_path, image);
 
         RCLCPP_DEBUG(this->get_logger(), "Logged RGB8 image to entity: %s with timestamp: %.3f, size: %dx%d",
