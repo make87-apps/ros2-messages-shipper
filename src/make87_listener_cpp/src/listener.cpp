@@ -275,8 +275,8 @@ private:
         // Process header if present
         HeaderInfo header_info = process_header(msg->header);
 
-        // Set timestamp in rerun
-        rec_->set_time_sequence("header_time", static_cast<int64_t>(header_info.timestamp_secs * 1e9));
+        // Set timestamp in rerun as seconds since epoch
+        rec_->set_time_timestamp_secs_since_epoch("header_time", header_info.timestamp_secs);
 
         // Determine media type from format
         std::string media_type = "image/jpeg"; // Default
@@ -313,8 +313,8 @@ private:
         // Process header if present
         HeaderInfo header_info = process_header(msg->header);
 
-        // Set timestamp in rerun
-        rec_->set_time_sequence("header_time", static_cast<int64_t>(header_info.timestamp_secs * 1e9));
+        // Set timestamp in rerun as seconds since epoch
+        rec_->set_time_timestamp_secs_since_epoch("header_time", header_info.timestamp_secs);
 
         // Log to rerun using message package nesting with frame_id suffix
         std::string entity_path = "/sensor_msgs/msg/Image";
