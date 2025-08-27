@@ -15,6 +15,8 @@
 #include "sensor_msgs/msg/image.hpp"
 #include "geometry_msgs/msg/pose2_d.hpp"
 #include "vision_msgs/msg/bounding_box2_d.hpp"
+#include "vision_msgs/msg/pose2_d.hpp"
+#include "vision_msgs/msg/point2_d.hpp"
 #include <nlohmann/json.hpp>
 #include <rerun.hpp>
 
@@ -342,7 +344,7 @@ private:
     bbox_sub_ = this->create_subscription<vision_msgs::msg::BoundingBox2D>(
       topic_name, 10, [this](const vision_msgs::msg::BoundingBox2D::SharedPtr msg) {
         RCLCPP_DEBUG(this->get_logger(), "Received vision_msgs/msg/BoundingBox2D: center=(%.2f, %.2f, %.2f°), size=(%.2f, %.2f)",
-                    msg->center.x, msg->center.y, msg->center.theta * 180.0 / M_PI, msg->size_x, msg->size_y);
+                    msg->center.position.x, msg->center.position.y, msg->center.theta * 180.0 / M_PI, msg->size_x, msg->size_y);
 
         // Log to rerun using message package nesting with application name suffix
         std::string entity_path = "/vision_msgs/msg/BoundingBox2D/" + rerun_config_.application_name;
@@ -351,7 +353,7 @@ private:
         std::ostringstream oss;
         oss << std::fixed << std::setprecision(2);
         oss << "BoundingBox2D:\n";
-        oss << "  Center: (" << msg->center.x << ", " << msg->center.y << ") px\n";
+        oss << "  Center: (" << msg->center.position.x << ", " << msg->center.position.y << ") px\n";
         oss << "  Rotation: " << (msg->center.theta * 180.0 / M_PI) << "°\n";
         oss << "  Size: " << msg->size_x << " x " << msg->size_y << " px";
 
