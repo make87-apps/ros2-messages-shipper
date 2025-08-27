@@ -4,9 +4,10 @@ FROM ros:${ROS_DISTRO}-ros-base AS builder
 SHELL ["/bin/bash", "-c"]
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Build essentials + colcon
+# Build essentials + colcon + vision_msgs
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake python3-colcon-common-extensions \
+    ros-${ROS_DISTRO}-vision-msgs \
     && rm -rf /var/lib/apt/lists/*
 
 # Workspace lives at /opt/ws; your Docker build context is the repo root (.)
@@ -25,6 +26,7 @@ SHELL ["/bin/bash", "-c"]
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-${ROS_DISTRO}-rmw-zenoh-cpp \
+    ros-${ROS_DISTRO}-vision-msgs \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
