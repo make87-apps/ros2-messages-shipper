@@ -10,6 +10,8 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(vision_msgs REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # Fetch dependencies
@@ -31,7 +33,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(nlohmann_json rerun_sdk)
 
 add_executable(listener src/listener.cpp)
-ament_target_dependencies(listener rclcpp std_msgs sensor_msgs)
+ament_target_dependencies(listener rclcpp std_msgs sensor_msgs geometry_msgs vision_msgs)
 target_link_libraries(listener nlohmann_json::nlohmann_json rerun_sdk OpenSSL::SSL OpenSSL::Crypto)
 
 install(TARGETS listener

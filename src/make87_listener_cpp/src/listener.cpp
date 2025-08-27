@@ -6,12 +6,15 @@
 #include <chrono>
 #include <sstream>
 #include <iomanip>
+#include <cmath>
 #include <openssl/sha.h>
 #include "rclcpp/rclcpp.hpp"
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/header.hpp"
 #include "sensor_msgs/msg/compressed_image.hpp"
 #include "sensor_msgs/msg/image.hpp"
+#include "geometry_msgs/msg/pose2_d.hpp"
+#include "vision_msgs/msg/bounding_box2_d.hpp"
 #include <nlohmann/json.hpp>
 #include <rerun.hpp>
 
@@ -151,6 +154,8 @@ std::string parse_message_type_from_topic_key(const std::string& topic_key) {
                 type_name = "Image";
             } else if (package == "std_msgs" && type_name == "string") {
                 type_name = "String";
+            } else if (package == "vision_msgs" && type_name == "boundingbox2d") {
+                type_name = "BoundingBox2D";
             }
 
             std::string message_type = package + "/" + msg_part + "/" + type_name;
@@ -245,6 +250,8 @@ public:
       setup_compressed_image_subscriber(config.topic_name);
     } else if (config.message_type == "sensor_msgs/msg/Image") {
       setup_image_subscriber(config.topic_name);
+    } else if (config.message_type == "vision_msgs/msg/BoundingBox2D") {
+      setup_bounding_box_subscriber(config.topic_name);
     } else {
       RCLCPP_ERROR(this->get_logger(), "Unsupported message type: %s", config.message_type.c_str());
       throw std::runtime_error("Unsupported message type: " + config.message_type);
@@ -331,10 +338,34 @@ private:
       });
   }
 
+  void setup_bounding_box_subscriber(const std::string& topic_name) {
+    bbox_sub_ = this->create_subscription<vision_msgs::msg::BoundingBox2D>(
+      topic_name, 10, [this](const vision_msgs::msg::BoundingBox2D::SharedPtr msg) {
+        RCLCPP_DEBUG(this->get_logger(), "Received vision_msgs/msg/BoundingBox2D: center=(%.2f, %.2f, %.2f°), size=(%.2f, %.2f)",
+                    msg->center.x, msg->center.y, msg->center.theta * 180.0 / M_PI, msg->size_x, msg->size_y);
+
+        // Log to rerun using message package nesting with application name suffix
+        std::string entity_path = "/vision_msgs/msg/BoundingBox2D/" + rerun_config_.application_name;
+
+        // Create a formatted text document with bounding box information
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(2);
+        oss << "BoundingBox2D:\n";
+        oss << "  Center: (" << msg->center.x << ", " << msg->center.y << ") px\n";
+        oss << "  Rotation: " << (msg->center.theta * 180.0 / M_PI) << "°\n";
+        oss << "  Size: " << msg->size_x << " x " << msg->size_y << " px";
+
+        rec_->log(entity_path, rerun::TextDocument(oss.str()));
+
+        RCLCPP_DEBUG(this->get_logger(), "Logged BoundingBox2D to entity: %s", entity_path.c_str());
+      });
+  }
+
   std::shared_ptr<rerun::RecordingStream> rec_;
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr string_sub_;
   rclcpp::Subscription<sensor_msgs::msg::CompressedImage>::SharedPtr image_sub_;
   rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr raw_image_sub_;
+  rclcpp::Subscription<vision_msgs::msg::BoundingBox2D>::SharedPtr bbox_sub_;
   RerunConfig rerun_config_;
 };
 
